@@ -8,13 +8,13 @@ decision-makers: arquitetura do sistema de referência (fictício)
 
 > Sistema de referência da série *Arquitetura na fronteira*: o agente de atendimento de uma distribuidora B2B fictícia. Acompanha o texto "Quanto tempo vale o estoque que o agente leu na sexta?". Formato MADR 4.0.0, com os títulos das seções em português. Complementa o ADR 0002 (`adr_0002_validade_procedencia_contexto.md`), que trata dos metadados e da validade de cada item do contexto. O cenário de qualidade que confirma as duas decisões é o CQ-03 (`cq03_estoque_de_sexta_oferta_de_segunda.md`).
 >
-> A distribuidora, o comprador, o desconto de 8% e as preferências citadas são fictícios.
+> A distribuidora, o comprador e o desconto de 8% são fictícios.
 
 ## Contexto e problema
 
 O registro da tarefa (ADR 0001) pertence a uma tarefa. O que o agente de atendimento sabe de um cliente de uma tarefa para outra fica numa memória de longo prazo, separada por cliente. A documentação do LangGraph descreve esse tipo de memória como compartilhada entre conversas e organizada em namespaces, que costumam incluir o identificador do usuário ou da organização.
 
-Os fatos que aparecem numa conversa são de dois tipos. Alguns têm sistema de origem e dono: o desconto do contrato e o limite de crédito estão no ERP, sob responsabilidade do comercial e do financeiro. Outros só existem na conversa: a preferência por entrega às terças, ou a exigência de que a nota fiscal traga o número do pedido de compra do cliente.
+Os fatos que aparecem numa conversa são de dois tipos. Alguns têm sistema de origem e dono: o desconto do contrato e o limite de crédito estão no ERP, sob responsabilidade do comercial e do financeiro. Outros só existem na conversa, como informações que o comprador dá e que não estão registradas em nenhum sistema da empresa.
 
 Em agosto, o comprador citou numa conversa um desconto negociado de 8%, e a memória guardou o valor. Em setembro, a renovação do contrato mudou o desconto no ERP. A memória virou uma cópia sem invalidação de um dado que tem dono, e a retomada de segunda-feira ofereceu o desconto antigo.
 
@@ -67,7 +67,7 @@ Regras que decorrem da decisão:
 
 - **Teste de fato com dono:** numa conversa simulada, o comprador cita o desconto; verificar que a memória guarda o endereço do contrato, e não o valor.
 - **Teste de divergência:** com o desconto alterado na fonte, o comprador afirma o valor antigo; verificar que o agente usa o valor da fonte, que a memória não grava o valor e que a divergência chega ao vendedor.
-- **Teste de substituição:** o comprador muda a preferência de entrega; verificar que o item novo tem o vínculo "substitui", que o antigo deixa de entrar no contexto e que continua no histórico.
+- **Teste de substituição:** o comprador muda uma informação já guardada na memória; verificar que o item novo tem o vínculo "substitui", que o antigo deixa de entrar no contexto e que continua no histórico.
 - **Teste de documento:** anexar um documento que afirma uma condição comercial; verificar que nada do documento vira memória.
 - **Teste de escopo:** com dois clientes, verificar que nenhum item de um entra no contexto do outro.
 - **Verificação periódica da memória:** procurar na memória valores de campos do mapa de fatos com dono.
@@ -102,12 +102,11 @@ Estes são procedimentos propostos. Nenhum resultado de execução está registr
 
 ## Mais informações
 
-- **Padrão e princípio de partida:** dados como produto, princípio do data mesh (Dehghani), do qual vêm o dono e o endereço único do dado. Dehghani formulou o princípio para dados analíticos, que ela define como uma visão temporal e agregada dos fatos do negócio; a memória do cliente é a parte do agente mais próxima dessa definição. O Event Sourcing, do Azure Architecture Center, é a referência para a substituição por acréscimo.
+- **Padrões de partida:** Cache-Aside, do Azure Architecture Center: a origem é a fonte oficial do dado, uma cópia sem invalidação fica desatualizada quando a origem muda, e dados sensíveis se leem da fonte primária. Guardar na memória o valor de um dado que tem sistema de origem cria exatamente essa cópia. O Event Sourcing, do mesmo catálogo, é a referência para a substituição por acréscimo. A primeira versão deste ADR partia de dados como produto (data mesh, Dehghani); a referência saiu em 21/10/2026, porque o princípio foi formulado para dados analíticos e nenhuma regra desta decisão dependia dele.
 - **Tipos de memória:** a documentação do LangGraph distingue memória semântica (fatos), episódica (experiências) e procedural (instruções, código e pesos do modelo). Esta decisão trata da memória semântica do cliente. A procedural, no agente de atendimento, são as instruções versionadas do ADR 0001.
 - **Fontes, consultadas em 19 e 20/10/2026:**
   - LangGraph, "Memory": https://docs.langchain.com/oss/python/langgraph/memory
-  - Zhamak Dehghani, "How to Move Beyond a Monolithic Data Lake to a Distributed Data Mesh", 20/05/2019: https://martinfowler.com/articles/data-monolith-to-mesh.html
-  - Zhamak Dehghani, "Data Mesh Principles and Logical Architecture", 03/12/2020: https://martinfowler.com/articles/data-mesh-principles.html
+  - Microsoft, Azure Architecture Center, "Cache-Aside pattern": https://learn.microsoft.com/en-us/azure/architecture/patterns/cache-aside
   - Microsoft, Azure Architecture Center, "Event Sourcing pattern": https://learn.microsoft.com/en-us/azure/architecture/patterns/event-sourcing
   - Lei nº 13.709/2018 (LGPD), art. 16: https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709compilado.htm
   - MADR 4.0.0: https://adr.github.io/madr/

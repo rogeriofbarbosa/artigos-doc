@@ -46,13 +46,13 @@ Opção escolhida: **4**. É a única das quatro em que o harness, e não o mode
 Regras que decorrem da decisão:
 
 1. **Metadados.** Todo item que entra no contexto traz, além do conteúdo:
-   - a fonte: o dono do dado, o sistema de origem e o endereço do dado nesse sistema;
+   - a fonte: o sistema de origem, a área responsável pelo dado e o endereço do dado nesse sistema;
    - o momento da leitura;
    - a validade, por tempo ou até um evento de invalidação;
    - o escopo, que é o cliente da tarefa.
 
    Um item sem esses metadados não entra.
-2. **Política de validade.** Cada tipo de dado tem uma validade declarada pelo dono do dado e mantida pela arquitetura. Na distribuidora (valores ilustrativos):
+2. **Política de validade.** Cada tipo de dado tem uma validade declarada pela área responsável pelo dado e mantida pela arquitetura. Na distribuidora (valores ilustrativos):
 
    | Dado | Dono e origem | Validade |
    |---|---|---|
@@ -66,7 +66,7 @@ Regras que decorrem da decisão:
 5. **Texto livre.** As instruções proíbem compromissos em texto livre. O verificador de compromissos retém uma mensagem ao cliente que cite quantidade disponível, prazo ou preço sem uma chamada da ferramenta correspondente no mesmo passo.
 6. **Referência para o que fica fora.** O contexto traz a lista do que ficou de fora, com o identificador, o endereço e uma linha de descrição de cada item, para o modelo carregar o que precisar por ferramenta.
 7. **Seleção.** Sob o orçamento de tokens de cada chamada [P], sai primeiro o item menos útil para a próxima decisão. O resultado bruto de uma chamada de ferramenta antiga sai do contexto, e o endereço da leitura fica.
-8. **Resumo.** O resumo usado no contexto é gravado como evento (ADR 0001, regra 10) com a lista dos eventos e das fontes de que deriva. Ele não copia valores que têm validade: cita o item pela referência, e o valor entra no contexto pela regra 3.
+8. **Resumo.** Quem prepara o resumo é o harness. Antes de pedir o resumo ao modelo, ele retira da entrada os resultados de consultas a sistemas de origem e deixa no lugar o endereço de cada leitura. O resumo é gravado como evento (ADR 0001, regra 10), e o harness registra nesse evento a faixa de eventos que foi resumida. Um valor dito na própria conversa pode aparecer no resumo, reescrito pelo modelo, e nada no desenho impede isso. Por isso o resumo é histórico da conversa e nunca é fonte de um valor usado num compromisso com o cliente (regra 4).
 9. **Ordem de montagem.** Do mais estável ao mais volátil: instruções e descrições das ferramentas; memória do cliente; resumo e eventos da tarefa depois dele, com as intenções pendentes; lista do que ficou de fora; itens lidos nas fontes. O cache de prompt só aproveita o início idêntico da entrada, e um item relido no meio impediria o aproveitamento de tudo o que vem depois.
 10. **Evento de decisão.** Além do que a regra 2 do ADR 0001 exige, o evento de decisão lista os itens do contexto com a fonte, o momento da leitura, a validade e a indicação de vencido.
 11. **Escopo.** Itens de outro cliente nunca entram no contexto da tarefa. As regras de acesso por usuário e por papel ficam para as decisões do tema autoridade.
@@ -76,12 +76,13 @@ Regras que decorrem da decisão:
 - Bom: nenhum compromisso com o cliente se apoia numa cópia vencida, independentemente do que o modelo decidir.
 - Bom: o modelo sabe que um dado fora do contexto existe e onde buscá-lo.
 - Bom: a investigação de uma decisão sabe o que o modelo leu, de que fonte e com que idade.
-- Bom: o resumo mantém o caminho de volta à origem, e a mudança de um valor na fonte não fica presa numa paráfrase.
+- Bom: o harness sabe o que cada resumo resumiu, os resultados de consultas não entram no resumo, e um valor reescrito no resumo não sustenta um compromisso, porque a regra 4 lê o valor na fonte.
 - Bom: a ordem de montagem preserva o aproveitamento do cache de prompt.
 - Ruim: a leitura na fonte antes de cada compromisso aumenta a latência do passo e a carga sobre o ERP.
 - Ruim: os metadados ocupam tokens em cada item.
-- Ruim: a política de validade precisa de dono e de manutenção para cada tipo de dado.
+- Ruim: a política de validade precisa de um responsável e de manutenção para cada tipo de dado.
 - Ruim: a regra depende de endereços estáveis nos sistemas de origem.
+- Neutro: um valor dito na conversa pode continuar no resumo com o conteúdo antigo. Ele não é corrigido; a garantia vem da regra 4, e não da redação do resumo.
 - Neutro: a validade por evento depende de o sistema de origem publicar eventos de mudança. Sem eles, vale o prazo por tempo.
 - Neutro: a retenção de mensagens com valores em texto livre (regra 5) é uma barreira por padrão de texto e pode deixar passar uma formulação que ela não reconhece. A medida da eficácia fica para as avaliações do tema evolução em produção.
 
@@ -90,7 +91,7 @@ Regras que decorrem da decisão:
 - **Teste de item vencido:** gravar uma consulta de estoque, avançar o relógio além da validade e verificar que o item entra marcado como vencido, com o endereço, ou é relido, conforme o tipo de tarefa.
 - **Teste de compromisso:** com uma cópia válida de estoque no contexto e a fonte alterada depois da leitura, fazer o modelo propor uma oferta e verificar que o verificador lê a fonte, que a ferramenta recusa e que nenhuma mensagem com o valor antigo chega ao cliente.
 - **Teste de texto livre:** induzir o modelo a citar preço ou quantidade numa resposta sem a ferramenta e verificar que a mensagem é retida.
-- **Teste de resumo:** compactar uma conversa que cita o desconto, mudar o desconto na fonte e verificar que o resumo traz a referência, e não o valor.
+- **Teste de resumo:** resumir uma conversa que contém uma consulta de estoque e uma menção do comprador ao desconto. Verificar que o resultado da consulta não entrou na entrada do resumo, que o evento do resumo registra a faixa resumida e que, com o desconto alterado no ERP, a oferta usa o valor lido na fonte, e não o que aparece no resumo.
 - **Teste de referência:** deixar um item fora do contexto e verificar que a lista traz o endereço e que o modelo consegue carregá-lo pela ferramenta.
 - **Teste de ordem:** comparar o início da entrada de duas chamadas seguidas da mesma tarefa e verificar que a releitura de um item não altera nada antes da camada dos itens lidos nas fontes.
 - **Verificação do registro:** todo evento de decisão lista os itens do contexto com os metadados da regra 1.
@@ -125,14 +126,12 @@ Estes são procedimentos propostos. Nenhum resultado de execução está registr
 
 ## Mais informações
 
-- **Padrões de partida:** Cache-Aside, padrão de projeto do Azure Architecture Center (carga sob demanda, invalidação na escrita, expiração ajustada ao padrão de acesso, consistência não garantida, dados sensíveis lidos da fonte primária); e dados como produto, princípio do data mesh (Dehghani), de onde vêm o dono, o endereço e a procedência dos metadados. Dehghani formulou o princípio para dados analíticos; a aplicação a dados operacionais é extensão desta decisão.
-- **Vocabulário de procedência:** os metadados correspondem a conceitos do W3C PROV-DM (Recomendação de 30/04/2013). O item é uma *entity*; a leitura na fonte é a *generation* da cópia; o dono é a *attribution*; o fim da validade é a *invalidation*; o resumo que deriva de eventos é uma *derivation*. A correspondência é do autor e serve para quem quiser serializar os metadados num formato padronizado.
-- **Recuperação antecipada e sob demanda:** o relato da Anthropic descreve a recuperação antes da chamada, por embeddings, e a recuperação *just in time*, com identificadores leves e ferramentas, e considera que os agentes mais eficazes podem combinar as duas. As regras 3, 4 e 6 são a combinação adotada na distribuidora.
+- **Padrão de partida:** Cache-Aside, padrão de projeto do Azure Architecture Center (carga sob demanda, invalidação na escrita, expiração ajustada ao padrão de acesso, consistência não garantida, dados sensíveis lidos da fonte primária). A origem continua sendo a fonte oficial do dado, e a cópia que chega ao contexto é tratada como cópia de cache, com validade. Os metadados de fonte, leitura, validade e escopo são decisão desta arquitetura, e não vêm de um padrão publicado. A primeira versão deste ADR citava também dados como produto (data mesh, Dehghani); a referência saiu em 21/10/2026, porque o princípio foi formulado para dados analíticos e nenhuma regra desta decisão dependia dele.
+- **Vocabulário de procedência:** os metadados correspondem a conceitos do W3C PROV-DM (Recomendação de 30/04/2013). O item é uma *entity*; a leitura na fonte é a *generation* da cópia; a área responsável é a *attribution*; o fim da validade é a *invalidation*; o resumo que deriva de eventos é uma *derivation*. A correspondência é do autor e serve para quem quiser serializar os metadados num formato padronizado.
+- **Recuperação antecipada e sob demanda:** o relato da Anthropic descreve dois momentos de recuperação: antes da chamada ao modelo, como na busca com embeddings, e durante a execução, na abordagem *just in time*, com identificadores leves e ferramentas. Segundo o relato, em certos cenários os agentes mais eficazes combinam as duas formas, carregando parte dos dados antes, pela rapidez, e explorando o restante por conta própria; o relato acrescenta que essa estratégia pode servir melhor a conteúdo menos dinâmico. A regra 6 (referência para o que fica fora) segue a abordagem *just in time*. As regras 3 e 4 não são a estratégia híbrida do relato: a releitura do que venceu e a leitura na fonte antes de um compromisso servem para conferir dados que mudam, e não para ganhar rapidez, e são decisão desta arquitetura.
 - **Relação com o ADR 0001:** a regra 10 deste ADR estende a regra 2 do ADR 0001 (conteúdo do evento de decisão), e a regra 8 estende a regra 10 (resumo gravado como evento).
 - **Fontes, consultadas em 19 e 20/10/2026:**
   - Microsoft, Azure Architecture Center, "Cache-Aside pattern": https://learn.microsoft.com/en-us/azure/architecture/patterns/cache-aside
-  - Zhamak Dehghani, "How to Move Beyond a Monolithic Data Lake to a Distributed Data Mesh", 20/05/2019: https://martinfowler.com/articles/data-monolith-to-mesh.html
-  - Zhamak Dehghani, "Data Mesh Principles and Logical Architecture", 03/12/2020: https://martinfowler.com/articles/data-mesh-principles.html
   - Anthropic, "Effective context engineering for AI agents", 29/09/2025, relato de engenharia do fornecedor: https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
   - W3C, "PROV-DM: The PROV Data Model", Recomendação de 30/04/2013: https://www.w3.org/TR/prov-dm/
   - Documentação de cache de prompt: Anthropic, https://platform.claude.com/docs/en/build-with-claude/prompt-caching; Google Cloud, https://docs.cloud.google.com/gemini-enterprise-agent-platform/models/context-cache/context-cache-overview; OpenAI, https://developers.openai.com/api/docs/guides/prompt-caching
